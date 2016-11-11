@@ -1178,7 +1178,11 @@ static void *timerthread(void *param)
 			if (refresh_on_max)
 				pthread_cond_signal(&refresh_on_max_cond);
 		}
-		stat->avg += (double) diff;
+		if (stat->cycles == 0) {
+			stat->avg = (double) diff;
+		} else {
+			stat->avg = (stat->avg + (double) diff) * ((double) stat->cycles / (double) (stat->cycles + 1));
+		}
 
 		if (trigger && (diff > trigger)) {
 			trigger_update(par, diff, calctime(now));
@@ -2005,7 +2009,7 @@ static void print_hist(struct thread_param *par[], int nthreads)
 	fprintf(fd, "# Avg Latencies:");
 	for (j = 0; j < nthreads; j++)
 		fprintf(fd, " %05lu", par[j]->stats->cycles ?
-		       (long)(par[j]->stats->avg/par[j]->stats->cycles) : 0);
+		       (long)(par[j]->stats->avg) : 0);
 	fprintf(fd, "\n");
 	fprintf(fd, "# Max Latencies:");
 	maxmax = 0;
@@ -2059,7 +2063,7 @@ static void print_stat(FILE *fp, struct thread_param *par, int index, int verbos
 			fprintf(fp, fmt, index, stat->tid, par->prio,
 				par->interval, stat->cycles, stat->min,
 				stat->act, stat->cycles ?
-				(long)(stat->avg/stat->cycles) : 0, stat->max);
+				(long)(stat->avg) : 0, stat->max);
 
 			if (smi)
 				fprintf(fp," SMI:%8ld", stat->smi_count);
